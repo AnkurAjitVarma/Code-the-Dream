@@ -1,0 +1,173 @@
+openapi: 3.0.3
+info:
+  title: WebApp API
+  description: |
+    REST API for the WebApp service. Provides user management. Protected routes require HTTP Basic
+    Authentication.
+  version: 2.0.0
+  contact:
+    name: Ankur Ajit Varma
+
+servers:
+  - url: /
+    description: Default server
+
+tags:
+  - name: User
+    description: User registration, verification, and profile management
+
+paths:
+  # ---------------------------------------------------------------------------
+  # User
+  # ---------------------------------------------------------------------------
+  /user:
+    post:
+      tags: [User]
+      summary: Create a new user account
+      description: >
+        Registers a new user.
+      operationId: createUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUserRequest"
+      responses:
+        "201":
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserResponse"
+        "400":
+          description: Invalid request body or validation failure
+        "409":
+          description: A user with the given email already exists
+
+  /user/self:
+    get:
+      tags: [User]
+      summary: Get authenticated user's profile
+      description: Returns the profile of the currently authenticated user.
+      operationId: getUser
+      security:
+        - basicAuth: []
+      responses:
+        "200":
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserResponse"
+        "401":
+          description: Missing or invalid credentials
+
+    patch:
+      tags: [User]
+      summary: Update authenticated user's profile
+      description: >
+        Updates editable fields on the authenticated user's profile.
+        Read-only fields (id, email, account_created, account_updated) are
+        ignored if supplied.
+      operationId: updateUser
+      security:
+        - basicAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUserRequest"
+      responses:
+        "204":
+          description: Profile updated successfully (no body)
+        "400":
+          description: Invalid request body or attempt to modify read-only fields
+        "401":
+          description: Missing or invalid credentials
+  
+
+# =============================================================================
+# Components
+# =============================================================================
+components:
+
+  securitySchemes:
+    basicAuth:
+      type: http
+      scheme: basic
+      description: >
+        RFC 7617 HTTP Basic Authentication. Credentials are the user's
+        email address and password, Base64-encoded as `email:password`.
+
+  schemas:
+    # -------------------------------------------------------------------------
+    # User
+    # -------------------------------------------------------------------------
+    CreateUserRequest:
+      type: object
+      required: [first_name, last_name, email, password]
+      properties:
+        first_name:
+          type: string
+          minLength: 1
+          example: "Jane"
+        last_name:
+          type: string
+          minLength: 1
+          example: "Doe"
+        email:
+          type: string
+          format: email
+          example: "jane.doe@example.com"
+        password:
+          type: string
+          format: password
+          minLength: 8
+          example: "s3cr3tP@ss"
+
+    UpdateUserRequest:
+      type: object
+      description: >
+        At least one of the allowed fields must be provided.
+        Supplying read-only fields (id, email, account_created,
+        account_updated) will result in a 400 error.
+      properties:
+        first_name:
+          type: string
+          minLength: 1
+          example: "Jane"
+        last_name:
+          type: string
+          minLength: 1
+          example: "Smith"
+
+    UserResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+          example: "d290f1ee-6c54-4b01-90e6-d701748f0851"
+        first_name:
+          type: string
+          example: "Jane"
+        last_name:
+          type: string
+          example: "Doe"
+        email:
+          type: string
+          format: email
+          example: "jane.doe@example.com"
+        account_created:
+          type: string
+          format: date-time
+          readOnly: true
+          example: "2024-01-15T10:30:00Z"
+        account_updated:
+          type: string
+          format: date-time
+          readOnly: true
+          example: "2024-03-20T14:45:00Z"
